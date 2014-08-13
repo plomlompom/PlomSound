@@ -2,3 +2,5 @@ PlomSound
 =========
 
 experiments in background noise
+
+Expects OSS' /dev/dsp device file.
