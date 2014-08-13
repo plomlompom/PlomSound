@@ -1,9 +1,9 @@
-#include <errno.h> /* global errno */
+#include <errno.h> /* errno */
 #include <fcntl.h> /* open() */
 #include <linux/soundcard.h> /* SOUND_PCM_WRITE_RATE */
 #include <stdint.h> /* uint32_t */
 #include <stdio.h> /* printf(), perror() */
-#include <stdlib.h> /* exit(), free(), malloc(), rand(), srand(), EXIT_FAILURE */
+#include <stdlib.h> /* exit(), free(), malloc(), rand(), srand(), EXIT_FAILURE*/
 #include <string.h> /* memset() */
 #include <sys/ioctl.h> /* ioctl(), O_WRONLY */
 #include <time.h> /* time() */
