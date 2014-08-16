@@ -15,7 +15,7 @@
 #define N_STEPS_OCTAVE_TO_OCTAVE 8
 #define LOUDNESS 8
 #define MAX_LENGTH_DIVISOR 16
-#define DSP_RATE 192000
+#define DSP_RATE_TARGET 192000
 #define START_FREQ 32
 #define PROB_OCTAVE_CHANGE 2
 
@@ -23,6 +23,7 @@
 
 static char * buf;
 static int dsp;
+uint32_t dsp_rate;
 
 
 
@@ -49,8 +50,8 @@ static void exit_on_err(int err, const char * msg)
 static void beep(uint8_t length_div, uint16_t freq)
 {
     uint32_t size, size_cycle, marker_half_cycle, i, ii;
-    size = DSP_RATE / length_div;
-    size_cycle = DSP_RATE / freq;
+    size = dsp_rate / length_div;
+    size_cycle = dsp_rate / freq;
     marker_half_cycle = size_cycle / 2;
     for (i = ii = 0; i < size; i++, ii++)
     {
@@ -158,7 +159,7 @@ int main()
     /* Set up /dev/dsp devices to 192k bitrate. */
     dsp = open("/dev/dsp", O_WRONLY);
     exit_on_err(-1 == dsp, "open() failed.");
-    uint32_t dsp_rate = DSP_RATE;
+    dsp_rate = DSP_RATE_TARGET;
     exit_on_err(0>ioctl(dsp,SOUND_PCM_WRITE_RATE,&dsp_rate), "ioctl() failed.");
 
     /* Allocate memory for max. 1 second of playback. */
