@@ -1,7 +1,7 @@
 #include <errno.h> /* errno */
 #include <fcntl.h> /* open() */
 #include <linux/soundcard.h> /* SOUND_PCM_WRITE_RATE */
-#include <stdint.h> /* uint32_t */
+#include <stdint.h> /* uint8_t, uint16_t, uint32_t */
 #include <stdio.h> /* printf(), perror() */
 #include <stdlib.h> /* exit(), free(), malloc(), rand(), srand(), EXIT_FAILURE*/
 #include <string.h> /* memset() */
@@ -15,7 +15,7 @@
 #define N_STEPS_OCTAVE_TO_OCTAVE 8
 #define LOUDNESS 8
 #define MAX_LENGTH_DIVISOR 16
-#define DSP_RATE_TARGET 192000
+#define DSP_RATE_TARGET 48000
 #define START_FREQ 32
 #define PROB_OCTAVE_CHANGE 2
 
@@ -156,11 +156,12 @@ static void compose()
 
 int main()
 {
-    /* Set up /dev/dsp devices to 192k bitrate. */
+    /* Set up /dev/dsp devices to 192k sample rate. */
     dsp = open("/dev/dsp", O_WRONLY);
     exit_on_err(-1 == dsp, "open() failed.");
     dsp_rate = DSP_RATE_TARGET;
     exit_on_err(0>ioctl(dsp,SOUND_PCM_WRITE_RATE,&dsp_rate), "ioctl() failed.");
+    printf("%d\n", dsp_rate);
 
     /* Allocate memory for max. 1 second of playback. */
     buf = malloc(dsp_rate);
