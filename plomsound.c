@@ -161,7 +161,7 @@ int main()
     exit_on_err(-1 == dsp, "open() failed.");
     dsp_rate = DSP_RATE_TARGET;
     exit_on_err(0>ioctl(dsp,SOUND_PCM_WRITE_RATE,&dsp_rate), "ioctl() failed.");
-    printf("%d\n", dsp_rate);
+    printf("samples per second: %d\n", dsp_rate);
 
     /* Allocate memory for max. 1 second of playback. */
     buf = malloc(dsp_rate);
