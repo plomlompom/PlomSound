@@ -4,3 +4,5 @@ PlomSound
 experiments in background noise
 
 Expects OSS' /dev/dsp device file.
+
+Don't let it run too long, for it might build gigantic WAV files.
