@@ -16,6 +16,8 @@
 #define LOUDNESS 8
 #define MAX_LENGTH_DIVISOR 16
 #define DSP_RATE_TARGET 48000
+#define DSP_BITS_TARGET 8
+#define DSP_CHANNELS_TARGET 1
 #define START_FREQ 32
 #define PROB_OCTAVE_CHANGE 2
 
@@ -23,7 +25,9 @@
 
 static char * buf;
 static int dsp;
-uint32_t dsp_rate;
+static int dsp_rate;
+static int dsp_channels;
+static int dsp_bits;
 
 
 
@@ -156,12 +160,19 @@ static void compose()
 
 int main()
 {
-    /* Set up /dev/dsp devices to 192k sample rate. */
+    /* Set up /dev/dsp devices. */
     dsp = open("/dev/dsp", O_WRONLY);
     exit_on_err(-1 == dsp, "open() failed.");
+    char * err = "ioctl() failed.";
     dsp_rate = DSP_RATE_TARGET;
-    exit_on_err(0>ioctl(dsp,SOUND_PCM_WRITE_RATE,&dsp_rate), "ioctl() failed.");
+    exit_on_err(0>ioctl(dsp, SOUND_PCM_WRITE_RATE, &dsp_rate), err);
     printf("samples per second: %d\n", dsp_rate);
+    dsp_channels = DSP_CHANNELS_TARGET;
+    exit_on_err(0>ioctl(dsp, SOUND_PCM_WRITE_CHANNELS, &dsp_channels), err);
+    printf("channels: %d\n", dsp_channels);
+    dsp_bits = DSP_BITS_TARGET;
+    exit_on_err(0>ioctl(dsp, SOUND_PCM_WRITE_BITS, &dsp_bits), err);
+    printf("bytes per frame: %d\n", dsp_channels);
 
     /* Allocate memory for max. 1 second of playback. */
     buf = malloc(dsp_rate);
