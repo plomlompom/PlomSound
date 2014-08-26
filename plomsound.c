@@ -8,7 +8,7 @@
 #include <sys/ioctl.h> /* ioctl() */
 #include <sys/stat.h> /* S_IRWXU, S_IRWXG, S_IRWXO*/
 #include <time.h> /* time() */
-#include <unistd.h> /* close(), write(), lseek() */
+#include <unistd.h> /* close(), write(), lseek(), optarg, getopt() */
 
 
 
@@ -29,6 +29,7 @@ static int dsp_channels;
 static int dsp_bits;
 static int wav;
 static uint32_t wav_size;
+static uint8_t writing_wave;
 
 
 
@@ -67,7 +68,10 @@ static void beep(uint8_t length_div, uint16_t freq)
         buf[i] = ii < marker_half_cycle ? 0 : LOUDNESS;
     }
     exit_on_err(-1 == write(dsp, buf, size), "write() failed.");
-    exit_on_err(-1 == write(wav, buf, size), "write() failed.");
+    if (writing_wave)
+    {
+        exit_on_err(-1 == write(wav, buf, size), "write() failed.");
+    }
     wav_size = wav_size + size;
 }
 
@@ -209,11 +213,26 @@ static void write_wav_header(char * err_wri)
 
 
 
-int main()
+int main(int argc, char ** argv)
 {
     char * err_ioc, * err_o, * err_wri;
+    int opt;
 
-    /* Set up /dev/dsp device and wav file. */
+    /* Read command line arguments for setting wave file writing. */
+    writing_wave = 0;
+    while (-1 != (opt = getopt(argc, argv, "w")))
+    {
+        if ('w' == opt)
+        {
+            writing_wave = 1;
+        }
+        else
+        {
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    /* Set up /dev/dsp device. */
     err_ioc = "ioctl() failed.";
     err_o = "open() failed.";
     dsp = open("/dev/dsp", O_WRONLY);
@@ -229,11 +248,14 @@ int main()
     printf("bytes per frame: %d\n", dsp_channels);
 
     /* Set up wav file. */
-    err_wri = "Trouble with write().";
-    wav = open("out.wav", O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
-    exit_on_err(-1 == wav, err_o);
-    write_wav_header(err_wri);
-    wav_size = 44;
+    if (writing_wave)
+    {
+        err_wri = "Trouble with write().";
+        wav = open("out.wav", O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+        exit_on_err(-1 == wav, err_o);
+        write_wav_header(err_wri);
+        wav_size = 44;
+    }
 
     /* Allocate memory for max. 1 second of playback. */
     buf = malloc(dsp_rate);
@@ -244,11 +266,14 @@ int main()
 
     /* Clean up. (So far, is not actually called, ever.) */
     free(buf);
-    exit_on_err(-1 == lseek(wav, 4, SEEK_SET), "lseek() failed.");
-    write_little_endian_32(wav_size - 8, err_wri);
-    exit_on_err(-1 == lseek(wav, 40, SEEK_SET), "lseek() failed.");
-    write_little_endian_32(wav_size - 44, err_wri);
-    exit_on_err(-1 == close(wav), "close() failed.");
+    if (writing_wave)
+    {
+        exit_on_err(-1 == lseek(wav, 4, SEEK_SET), "lseek() failed.");
+        write_little_endian_32(wav_size - 8, err_wri);
+        exit_on_err(-1 == lseek(wav, 40, SEEK_SET), "lseek() failed.");
+        write_little_endian_32(wav_size - 44, err_wri);
+        exit_on_err(-1 == close(wav), "close() failed.");
+    }
     exit_on_err(-1 == close(dsp), "close() failed.");
     return(0);
 }
