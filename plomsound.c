@@ -1,7 +1,8 @@
-#define _POSIX_C_SOURCE 2
+#define _POSIX_C_SOURCE 2 /* getopt(), sigaction() */
 #include <errno.h> /* errno */
 #include <fcntl.h> /* open(), O_WRONLY, O_CREAT */
 #include <linux/soundcard.h> /* SOUND_PCM_WRITE_RATE */
+#include <signal.h> /* sigaction(), SIGINT */
 #include <stdint.h> /* uint8_t, uint16_t, uint32_t, UINT32_MAX */
 #include <stdio.h> /* printf(), perror() */
 #include <stdlib.h> /* exit(), free(), malloc(), rand(), srand(), EXIT_FAILURE*/
@@ -31,6 +32,7 @@ static int dsp_bits;
 static int wav;
 static uint32_t wav_size;
 static uint8_t writing_wave;
+static uint8_t sigint_called;
 
 
 
@@ -135,7 +137,7 @@ static void compose()
     octave_n  = rand() % N_OCTAVES;
     freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
     base_freq = get_base_octave(octave_n);
-    while (1)
+    for (sigint_called = 0; !sigint_called; )
     {
         long double multiplier;
         uint16_t freq;
@@ -254,9 +256,18 @@ static void obey_argv(int argc, char ** argv)
 
 
 
+/* Simply set sigint_called to 1. */
+static void sigint_handler()
+{
+    sigint_called = 1;
+}
+
+
+
 int main(int argc, char ** argv)
 {
     char * err_o, * err_wri;
+    struct sigaction act;
 
     /* Read command line arguments for setting wave file writing. */
     writing_wave = 0;
@@ -278,10 +289,15 @@ int main(int argc, char ** argv)
     buf = malloc(dsp_rate);
     exit_on_err(!buf, "malloc() failed.");
 
+    /* Set handler for SIGINT signal. */
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = &sigint_handler;
+    exit_on_err(sigaction(SIGINT, &act, NULL), "Trouble with sigaction().");
+
     /* Music composition loop. */
     compose();
 
-    /* Clean up. (So far, is not actually called, ever.) */
+    /* Clean up. */
     free(buf);
     if (writing_wave)
     {
