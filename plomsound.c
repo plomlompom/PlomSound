@@ -24,7 +24,6 @@
 
 
 
-static char * buf;
 static int dsp;
 static int dsp_rate;
 static int dsp_channels;
@@ -55,8 +54,8 @@ static void exit_on_err(int err, const char * msg)
 
 
 
-/* Write beep of frequency "freq" and length of 1 / "length_div". */
-static void beep(uint8_t length_div, uint16_t freq)
+/* Write beep of frequency "freq" and length of 1 / "length_div" via "buf". */
+static void beep(char * buf, uint8_t length_div, uint16_t freq)
 {
     uint32_t size, size_cycle, marker_half_cycle, i, ii;
     size = dsp_rate / length_div;
@@ -129,6 +128,7 @@ static long double nth_root_of_2(uint8_t degree)
 /* Compose/play/record not quite random series of beeps. */
 static void compose()
 {
+    static char * buf;
     uint16_t base_freq;
     uint8_t octave_n, freq_step;
     long double root_of_2;
@@ -137,6 +137,8 @@ static void compose()
     octave_n  = rand() % N_OCTAVES;
     freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
     base_freq = get_base_octave(octave_n);
+    buf = malloc(dsp_rate);
+    exit_on_err(!buf, "malloc() failed.");
     for (sigint_called = 0; !sigint_called; )
     {
         long double multiplier;
@@ -162,8 +164,9 @@ static void compose()
         length_div = 1 + rand() % (MAX_LENGTH_DIVISOR - 1);
         printf("freq %5d (base %5d step %3d multiply %d/100000) length 1/%3d\n",
                freq,base_freq,freq_step,(int)(multiplier*100000),length_div);
-        beep(length_div, freq);
+        beep(buf, length_div, freq);
     }
+    free(buf);
 }
 
 
@@ -281,10 +284,6 @@ int main(int argc, char ** argv)
         wav_size = 44;
     }
 
-    /* Allocate memory for max. 1 second of playback. */
-    buf = malloc(dsp_rate);
-    exit_on_err(!buf, "malloc() failed.");
-
     /* Set handler for SIGINT signal. */
     memset(&act, 0, sizeof(act));
     act.sa_handler = &sigint_handler;
@@ -294,7 +293,6 @@ int main(int argc, char ** argv)
     compose();
 
     /* Clean up. */
-    free(buf);
     if (writing_wave)
     {
         exit_on_err(-1 == lseek(wav, 4, SEEK_SET), "lseek() failed.");
