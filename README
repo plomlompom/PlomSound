@@ -1,8 +1,10 @@
 PlomSound
 =========
 
-experiments in background noise
+Experiments in background noise.
 
-Expects OSS' /dev/dsp device file.
+Expects gcc and OSS' /dev/dsp device file.
 
-Don't let it run too long, for it might build gigantic WAV files.
+Run it with -w option to copy output into a WAV file named out.wav.
+
+Build with ./build.sh scripts.

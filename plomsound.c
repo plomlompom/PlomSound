@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 2
 #include <errno.h> /* errno */
 #include <fcntl.h> /* open(), O_WRONLY, O_CREAT */
 #include <linux/soundcard.h> /* SOUND_PCM_WRITE_RATE */
@@ -217,7 +218,6 @@ static void setup_dsp(char * err_o)
 {
     char * err_ioc;
     err_ioc = "ioctl() failed.";
-    err_o = "open() failed.";
     dsp = open("/dev/dsp", O_WRONLY);
     exit_on_err(-1 == dsp, err_o);
     dsp_rate = DSP_RATE_TARGET;
@@ -254,13 +254,14 @@ static void obey_argv(int argc, char ** argv)
 
 int main(int argc, char ** argv)
 {
-    char * err_ioc, * err_o, * err_wri;
+    char * err_o, * err_wri;
 
     /* Read command line arguments for setting wave file writing. */
     writing_wave = 0;
     obey_argv(argc, argv);
 
     /* Set up /dev/dsp device and wav file . */
+    err_o = "open() failed.";
     setup_dsp(err_o);
     if (writing_wave)
     {
