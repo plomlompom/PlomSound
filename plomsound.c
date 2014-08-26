@@ -214,6 +214,7 @@ static void write_wav_header(char * err_wri)
 
 
 
+/* Set up /dev/dsp device. */
 static void setup_dsp(char * err_o)
 {
     char * err_ioc;
@@ -233,6 +234,7 @@ static void setup_dsp(char * err_o)
 
 
 
+/* Read command line options. */
 static void obey_argv(int argc, char ** argv)
 {
     int opt;
