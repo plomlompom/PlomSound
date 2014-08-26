@@ -213,26 +213,9 @@ static void write_wav_header(char * err_wri)
 
 
 
-int main(int argc, char ** argv)
+static void setup_dsp(char * err_o)
 {
-    char * err_ioc, * err_o, * err_wri;
-    int opt;
-
-    /* Read command line arguments for setting wave file writing. */
-    writing_wave = 0;
-    while (-1 != (opt = getopt(argc, argv, "w")))
-    {
-        if ('w' == opt)
-        {
-            writing_wave = 1;
-        }
-        else
-        {
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    /* Set up /dev/dsp device. */
+    char * err_ioc;
     err_ioc = "ioctl() failed.";
     err_o = "open() failed.";
     dsp = open("/dev/dsp", O_WRONLY);
@@ -246,8 +229,39 @@ int main(int argc, char ** argv)
     dsp_bits = 1;
     exit_on_err(0>ioctl(dsp, SOUND_PCM_WRITE_BITS, &dsp_bits), err_ioc);
     printf("bytes per frame: %d\n", dsp_channels);
+}
 
-    /* Set up wav file. */
+
+
+static void obey_argv(int argc, char ** argv)
+{
+    int opt;
+    while (-1 != (opt = getopt(argc, argv, "w")))
+    {
+        if ('w' == opt)
+        {
+            writing_wave = 1;
+        }
+        else
+        {
+            exit(EXIT_FAILURE);
+        }
+    }
+
+}
+
+
+
+int main(int argc, char ** argv)
+{
+    char * err_ioc, * err_o, * err_wri;
+
+    /* Read command line arguments for setting wave file writing. */
+    writing_wave = 0;
+    obey_argv(argc, argv);
+
+    /* Set up /dev/dsp device and wav file . */
+    setup_dsp(err_o);
     if (writing_wave)
     {
         err_wri = "Trouble with write().";
