@@ -183,15 +183,11 @@ static void write_little_endian_16(uint16_t value, char * err)
 /* Little-endian write of 32 bit "value" to wav file, "err" as error message. */
 static void write_little_endian_32(uint32_t value, char * err)
 {
-    uint8_t byte;
-    byte = value;
-    exit_on_err(-1 == write(wav, &byte, 1), err);;
-    byte = value >> 8;
-    exit_on_err(-1 == write(wav, &byte, 1), err);;
-    byte = value >> 16;
-    exit_on_err(-1 == write(wav, &byte, 1), err);;
-    byte = value >> 24;
-    exit_on_err(-1 == write(wav, &byte, 1), err);;
+    uint16_t double_byte;
+    double_byte = value;
+    write_little_endian_16(double_byte, err);
+    double_byte = value >> 16;
+    write_little_endian_16(double_byte, err);
 }
 
 
