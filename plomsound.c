@@ -24,6 +24,14 @@
 
 
 
+struct mem_sound
+{
+    struct mem_sound * next;
+    uint8_t length_div;
+    uint8_t octave_n;
+    uint8_t freq_step;
+};
+
 static struct dsp {
     int file;
     uint32_t rate;
@@ -38,6 +46,8 @@ static struct wav {
 } wav;
 
 static uint8_t sigint_called;
+
+static uint8_t compose_select;
 
 
 
@@ -131,43 +141,98 @@ static long double nth_root_of_2(uint8_t degree)
 
 
 
+
+/* Add at "pp_mem_sound" sound of random octavem step and length. */
+static void add_mem_sound(struct mem_sound ** pp_mem_sound)
+{
+    struct mem_sound * new_mem_sound = malloc(sizeof(struct mem_sound));
+    exit_on_err(!new_mem_sound, "malloc() failed.");
+    new_mem_sound->freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
+    new_mem_sound->length_div = 1 + rand() % (MAX_LENGTH_DIVISOR - 1);
+    new_mem_sound->octave_n = rand() % N_OCTAVES;
+    new_mem_sound->next = NULL;
+    *pp_mem_sound = new_mem_sound;
+}
+
+
+
+/* Iterate over growing sound series for new sound, add to it at the end. */
+static void bar(uint8_t * length_div, uint8_t * octave_n, uint8_t * freq_step)
+{
+    static struct mem_sound * mem_sounds = NULL;
+    static struct mem_sound * selected_mem_sound = NULL;
+    if (!mem_sounds)
+    {
+        add_mem_sound(&mem_sounds);
+        selected_mem_sound = mem_sounds;
+    }
+    *freq_step  = selected_mem_sound->freq_step;
+    *length_div = selected_mem_sound->length_div;
+    *octave_n   = selected_mem_sound->octave_n;
+    if (!selected_mem_sound->next)
+    {
+        add_mem_sound(&(selected_mem_sound->next));
+        selected_mem_sound = mem_sounds;
+    }
+    else
+    {
+        selected_mem_sound = selected_mem_sound->next;
+    }
+}
+
+
+
+/* Set sound of random length and in-octave step, change octave at extremes. */
+static void foo(uint8_t * length_div, uint8_t * octave_n, uint8_t * freq_step)
+{
+    if (!(*length_div))
+    {
+        *octave_n = rand() % N_OCTAVES;
+    }
+    if (rand() % PROB_OCTAVE_CHANGE)
+    {
+        if      (0 == *freq_step && *octave_n)
+        {
+            (*octave_n)--;
+        }
+        else if (   N_STEPS_OCTAVE_TO_OCTAVE - 1 == *freq_step
+                 && N_OCTAVES - 1 > *octave_n)
+        {
+            (*octave_n)++;
+        }
+    }
+    *freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
+    *length_div = 1 + rand() % (MAX_LENGTH_DIVISOR - 1);
+}
+
+
+
 /* Compose/play/record not quite random series of beeps. */
 static void compose()
 {
     static char * buf;
-    uint16_t base_freq;
-    uint8_t octave_n, freq_step;
+    uint8_t octave_n, freq_step, length_div;
     long double root_of_2;
     srand(time(0));
     root_of_2 = nth_root_of_2(N_STEPS_OCTAVE_TO_OCTAVE - 1);
-    octave_n  = rand() % N_OCTAVES;
-    freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
-    base_freq = get_base_octave(octave_n);
+    length_div = octave_n = freq_step = 0;
     buf = malloc(dsp.rate);
     exit_on_err(!buf, "malloc() failed.");
     for (sigint_called = 0; !sigint_called; )
     {
         long double multiplier;
-        uint16_t freq;
-        uint8_t length_div;
-        if (rand() % PROB_OCTAVE_CHANGE)
+        uint16_t freq, base_freq;
+        if (!compose_select)
         {
-            if      (0 == freq_step && octave_n)
-            {
-                octave_n--;
-                base_freq = get_base_octave(octave_n);
-            }
-            else if (   N_STEPS_OCTAVE_TO_OCTAVE - 1 == freq_step
-                     && N_OCTAVES - 1 > octave_n)
-            {
-                octave_n++;
-                base_freq = get_base_octave(octave_n);
-            }
+            foo(&length_div, &octave_n, &freq_step);
         }
-        freq_step = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
+        else
+        {
+            bar(&length_div, &octave_n, &freq_step);
+        }
+        base_freq = get_base_octave(octave_n);
         multiplier = to_power_of(root_of_2, freq_step);
         freq = base_freq * multiplier;
-        length_div = 1 + rand() % (MAX_LENGTH_DIVISOR - 1);
         printf("freq %5d (base %5d step %3d multiply %d/100000) length 1/%3d\n",
                freq,base_freq,freq_step,(int)(multiplier*100000),length_div);
         beep(buf, length_div, freq);
@@ -245,11 +310,15 @@ static void setup_dsp(char * err_o)
 static void obey_argv(int argc, char ** argv)
 {
     int opt;
-    while (-1 != (opt = getopt(argc, argv, "w")))
+    while (-1 != (opt = getopt(argc, argv, "wn")))
     {
-        if ('w' == opt)
+        if      ('w' == opt)
         {
             wav.active = 1;
+        }
+        else if ('n' == opt)
+        {
+            compose_select = 1;
         }
         else
         {
@@ -274,8 +343,9 @@ int main(int argc, char ** argv)
     char * err_o, * err_wri;
     struct sigaction act;
 
-    /* Read command line arguments for setting wave file writing. */
+    /* Default and read command line options. */
     wav.active = 0;
+    compose_select = 0;
     obey_argv(argc, argv);
 
     /* Set up /dev/dsp device and wav file . */
