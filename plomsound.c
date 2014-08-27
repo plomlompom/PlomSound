@@ -161,6 +161,8 @@ static void bar(uint8_t * length_div, uint8_t * octave_n, uint8_t * freq_step)
 {
     static struct mem_sound * mem_sounds = NULL;
     static struct mem_sound * selected_mem_sound = NULL;
+    static uint32_t i = 1;
+    static uint32_t i_max = 1;
     if (!mem_sounds)
     {
         add_mem_sound(&mem_sounds);
@@ -169,14 +171,18 @@ static void bar(uint8_t * length_div, uint8_t * octave_n, uint8_t * freq_step)
     *freq_step  = selected_mem_sound->freq_step;
     *length_div = selected_mem_sound->length_div;
     *octave_n   = selected_mem_sound->octave_n;
+    printf("sound %d in series of %d\n", i, i_max);
     if (!selected_mem_sound->next)
     {
         add_mem_sound(&(selected_mem_sound->next));
         selected_mem_sound = mem_sounds;
+        i = 1;
+        i_max++;
     }
     else
     {
         selected_mem_sound = selected_mem_sound->next;
+        i++;
     }
 }
 
