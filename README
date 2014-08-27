@@ -5,6 +5,6 @@ Experiments in background noise.
 
 Expects gcc and OSS' /dev/dsp device file.
 
-Run it with -w option to copy output into a WAV file named out.wav.
+Build with ./build.sh script. Run with ./plomsound.
 
-Build with ./build.sh scripts.
+Run ./plomsound with -w option to copy output into a WAV file named out.wav.
