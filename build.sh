@@ -1,2 +1,2 @@
 #!/bin/sh
-gcc -ansi -pedantic-errors -Wall -Werror -Wextra -Wformat-security -Os -o plomsound plomsound.c
+gcc -ansi -pedantic-errors -Wall -Werror -Wextra -Wformat-security -g -o plomsound plomsound.c

@@ -10,3 +10,5 @@ Build with ./build.sh script. Run with ./plomsound.
 Run ./plomsound with -w option to copy output into a WAV file named out.wav.
 
 Run ./plomsund with -n to use the new composition algorithm.
+
+Run ./plomsund with -a to use another new composition algorithm.

@@ -150,7 +150,8 @@ static long double nth_root_of_2(uint8_t degree)
 /* Add at "pp_mem_sound" sound of random octavem step and length. */
 static void add_mem_sound(struct mem_sound ** pp_mem_sound)
 {
-    struct mem_sound * new_mem_sound = malloc(sizeof(struct mem_sound));
+    struct mem_sound * new_mem_sound;
+    new_mem_sound = malloc(sizeof(struct mem_sound));
     exit_on_err(!new_mem_sound, "malloc() failed.");
     new_mem_sound->next = NULL;
     *pp_mem_sound = new_mem_sound;
@@ -159,15 +160,15 @@ static void add_mem_sound(struct mem_sound ** pp_mem_sound)
 
 
 /* By random chance, grow or shrink "octave_n" if "freq_step" is min or max. */
-static void change_octave_on_extreme(struct sound * snd)
+static void change_octave_on_extreme(struct sound * snd, uint8_t freq_step)
 {
     if (rand() % PROB_OCTAVE_CHANGE)
     {
-        if      (!snd->freq_step && snd->octave_n)
+        if      (!freq_step && snd->octave_n)
         {
             snd->octave_n--;
         }
-        else if (   N_STEPS_OCTAVE_TO_OCTAVE - 1 == snd->freq_step
+        else if (   N_STEPS_OCTAVE_TO_OCTAVE - 1 == freq_step
                  && N_OCTAVES - 1 > snd->octave_n)
         {
             snd->octave_n++;
@@ -209,7 +210,8 @@ static void bar(struct sound * snd)
         add_mem_sound(&(mem_sound_select->next));
         set_rand_step_and_length(&(mem_sound_select->next->snd));
         mem_sound_select->next->snd.octave_n = mem_sound_select->snd.octave_n;
-        change_octave_on_extreme(&(mem_sound_select->next->snd));
+        change_octave_on_extreme(&(mem_sound_select->next->snd),
+                                 mem_sound_select->snd.freq_step);
         mem_sound_select = mem_sounds;
         i = 1;
         i_max++;
@@ -223,6 +225,77 @@ static void bar(struct sound * snd)
 
 
 
+static void baz(struct sound * snd)
+{
+    static struct mem_sound * mem_sounds = NULL;
+    static struct mem_sound * mem_i = NULL;
+    static uint32_t i = 1;
+    static uint32_t i_max = 1;
+    if (!mem_sounds)
+    {
+        add_mem_sound(&mem_sounds);
+        mem_i = mem_sounds;
+        set_rand_step_and_length(&(mem_i->snd));
+        mem_i->snd.octave_n = rand() % N_OCTAVES;
+    }
+    snd->freq_step  = mem_i->snd.freq_step;
+    snd->length_div = mem_i->snd.length_div;
+    snd->octave_n   = mem_i->snd.octave_n;
+    printf("sound %d in series of %d\n", i, i_max);
+    if (!mem_i->next)
+    {
+        if (!(rand() % 4))
+        {
+            struct mem_sound * old_next;
+            uint32_t stop_i;
+            printf("ADD\n");
+            stop_i = rand() % i_max;
+            for (i = 0, mem_i = mem_sounds; i < stop_i; i++, mem_i = mem_i->next);
+            old_next = mem_i->next;
+            add_mem_sound(&(mem_i->next));
+            mem_i->next->next = old_next;
+            i_max++;
+            mem_i->next->snd.octave_n = mem_i->snd.octave_n;
+            change_octave_on_extreme(&(mem_i->next->snd), mem_i->snd.freq_step);
+            set_rand_step_and_length(&(mem_i->next->snd));
+        }
+        else if (!(rand() % 8))
+        {
+            struct mem_sound * mem_prev;
+            uint32_t new_i;
+            printf("CHANGE ");
+            new_i = rand() % i_max;
+            for (i = 0, mem_i = mem_prev = mem_sounds;
+                 i < new_i;
+                 i++, mem_prev = mem_i, mem_i = mem_i->next)
+            {
+                if (rand() % 2)
+                {
+                    printf("freq\n");
+                    mem_i->snd.octave_n = mem_prev->snd.octave_n;
+                    change_octave_on_extreme(&(mem_i->snd),
+                                             mem_prev->snd.freq_step);
+                    mem_i->snd.freq_step  = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
+                }
+                else
+                {
+                    printf("length\n");
+                    mem_i->snd.length_div = 1 + rand() % (MAX_LENGTH_DIVISOR-1);
+                }
+            }
+        }
+        mem_i = mem_sounds;
+        i = 1;
+    }
+    else
+    {
+        mem_i = mem_i->next;
+        i++;
+    }
+}
+
+
+
 /* Set sound of random length and in-octave step, change octave at extremes. */
 static void foo(struct sound * snd)
 {
@@ -230,7 +303,7 @@ static void foo(struct sound * snd)
     {
         snd->octave_n = rand() % N_OCTAVES;
     }
-    change_octave_on_extreme(snd);
+    change_octave_on_extreme(snd, snd->freq_step);
     set_rand_step_and_length(snd);
 }
 
@@ -255,9 +328,13 @@ static void compose()
         {
             foo(&snd);
         }
-        else
+        else if (1 == compose_select)
         {
             bar(&snd);
+        }
+        else
+        {
+            baz(&snd);
         }
         base_freq = get_base_octave(snd.octave_n);
         multiplier = to_power_of(root_of_2, snd.freq_step);
@@ -340,7 +417,7 @@ static void setup_dsp(char * err_o)
 static void obey_argv(int argc, char ** argv)
 {
     int opt;
-    while (-1 != (opt = getopt(argc, argv, "wn")))
+    while (-1 != (opt = getopt(argc, argv, "wna")))
     {
         if      ('w' == opt)
         {
@@ -349,6 +426,10 @@ static void obey_argv(int argc, char ** argv)
         else if ('n' == opt)
         {
             compose_select = 1;
+        }
+        else if ('a' == opt)
+        {
+            compose_select = 2;
         }
         else
         {
