@@ -267,21 +267,19 @@ static void baz(struct sound * snd)
             new_i = rand() % i_max;
             for (i = 0, mem_i = mem_prev = mem_sounds;
                  i < new_i;
-                 i++, mem_prev = mem_i, mem_i = mem_i->next)
+                 i++, mem_prev = mem_i, mem_i = mem_i->next);
+            if (rand() % 2)
             {
-                if (rand() % 2)
-                {
-                    printf("freq\n");
-                    mem_i->snd.octave_n = mem_prev->snd.octave_n;
-                    change_octave_on_extreme(&(mem_i->snd),
-                                             mem_prev->snd.freq_step);
-                    mem_i->snd.freq_step  = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
-                }
-                else
-                {
-                    printf("length\n");
-                    mem_i->snd.length_div = 1 + rand() % (MAX_LENGTH_DIVISOR-1);
-                }
+                printf("freq\n");
+                mem_i->snd.octave_n = mem_prev->snd.octave_n;
+                change_octave_on_extreme(&(mem_i->snd),
+                                         mem_prev->snd.freq_step);
+                mem_i->snd.freq_step  = rand() % N_STEPS_OCTAVE_TO_OCTAVE;
+            }
+            else
+            {
+                printf("length\n");
+                mem_i->snd.length_div = 1 + rand() % (MAX_LENGTH_DIVISOR-1);
             }
         }
         mem_i = mem_sounds;
